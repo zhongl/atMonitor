@@ -23,7 +23,7 @@ public class Demo {
     System.in.read();
   }
 
-  @MBean
+  @MBean(objectName="jsmx:type=Demo")
   static class ManagableServer extends Thread {
     public ManagableServer() {
       super("ManagableBean");

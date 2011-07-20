@@ -3,36 +3,66 @@ var j4p = new Jolokia({
 	jsonp : true
 });
 
-var data = [];
+var chart;
 
-// var options = {};
-
-function run() {
+function requestData() {
 	j4p.request({
 		type : "read",
 		mbean : "java.lang:type=Memory",
 		attribute : "HeapMemoryUsage"
 	}, {
 		success : function(resp) {
+			chart.yAxis.max = resp.value.max
+			chart.yAxis.min = resp.value.init
 			var value = resp.value.used / (1024 * 1024);
 			var time = resp.timestamp * 1000;
-
-			if (data.length == 10)
-				data.shift();
-			data.push([ time, value ]);
-
-			$.plot($("#memory"), [ data ], {
-				xaxis : {
-					mode : "time"
-				},
-				grid : {
-					backgroundColor : {
-						colors : [ "#fff", "#eee" ]
-					}
-				}
-			});
-			setTimeout(run, 1000);
+			var series = chart.series[0], shift = series.data.length > 20;
+			var point = [ time, value ];
+			chart.series[0].addPoint(point, true, shift);
+			setTimeout(requestData, 1000);
 		}
+	});
+
+}
+
+function run() {
+
+	chart = new Highcharts.Chart({
+		chart : {
+			renderTo : 'memory',
+			defaultSeriesType : 'spline',
+			events : {
+				load : requestData
+			}
+		},
+		title : {
+			text : 'MEMORY'
+		},
+		xAxis : {
+			type : 'datetime',
+			tickPixelInterval : 150
+		},
+		yAxis : {
+			title : {
+				text : 'Value'
+			},
+			plotLines : [ {
+				value : 0,
+				width : 1,
+				color : '#808080'
+			} ]
+		},
+		tooltip : {
+			formatter : function() {
+				return '<b>' + this.series.name + '</b><br/>'
+						+ Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x)
+						+ '<br/>' + Highcharts.numberFormat(this.y, 2);
+			}
+		},
+		series : [ {
+			name : 'Heap Memory Usage',
+			data : []
+		} ]
 	});
 
 }
