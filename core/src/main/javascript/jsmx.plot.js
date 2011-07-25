@@ -1,67 +1,109 @@
 /**
  * @param {String}
- *          id
- * @param {String}
  *          mbean
  * @param {String}
  *          attribute
- * @param {Function}
- *          update
  * @param {String}
- *          Optional path
+ *          path, Optional
+ * @returns {MBeanAttributeCoordinate}
+ */
+function MBeanAttributeCoordinate(mbean, attribute, path) {
+  this.mbean = function() {
+    return mbean;
+  };
+  this.attribute = function() {
+    return attribute;
+  };
+  this.path = function() {
+    return path ? path : "";
+  };
+}
+
+/**
+ * @param {String}
+ *          yAxisLabel
+ * @param {Function}
+ *          xAxisValueConvert
+ * @param {Number}
+ *          xAxisValueKeep
+ * @returns {PoltOptions}
+ */
+function PoltOptions(yAxisLabel, xAxisValueConvert, xAxisValueKeep) {
+  var defaultConvert = function(value) {
+    return value;
+  };
+
+  this.yAxisLabel = function() {
+    return yAxisLabel ? yAxisLabel : null;
+  };
+  this.xAxisValueConvert = xAxisValueConvert ? xAxisValueConvert
+      : defaultConvert;
+  this.xAxisValueKeep = function() {
+    return xAxisValueKeep ? xAxisValueKeep : 5;
+  };
+}
+
+/**
+ * @param {String}
+ *          placeholder, id of document element.
+ * @param {MBeanAttributeCoordinate}
+ *          mBeanAttributeCoordinate
+ * @param {PoltOptions}
+ *          plotOptions
  * @returns {MBeanAttributeRealTimePolt}
  */
-function MBeanAttributeRealTimePolt(id, mbean, attribute, update, path,
-    valueUnit) {
-  var chart = new Highcharts.Chart({
+function MBeanAttributeRealTimePolt(placeholder, mBeanAttributeCoordinate,
+    plotOptions) {
+  if (!plotOptions) plotOptions = new PoltOptions();
+  var options = {
     chart : {
-      renderTo : id
+      renderTo : placeholder
     },
     title : {
-      text : mbean + "/" + attribute
+      text : mBeanAttributeCoordinate.attribute()
     },
     xAxis : {
       type : "datetime"
     },
     yAxis : {
       title : {
-        text : null
-      },
-      labels : {
-        formatter : function() {
-          return (valueUnit) ? this.value + valueUnit : this.value;
-        }
+        text : plotOptions.yAxisLabel()
       }
     },
     series : [ {
-      name : path || "",
+      name : mBeanAttributeCoordinate.path(),
       data : []
     } ]
-  });
+
+  };
+
+  var chart = new Highcharts.Chart(options);
 
   this.collectAndUpdateBy = function(jolokia) {
     jolokia.request({
       type : "read",
-      mbean : mbean,
-      attribute : attribute,
-      path : path || ""
+      mbean : mBeanAttributeCoordinate.mbean(),
+      attribute : mBeanAttributeCoordinate.attribute(),
+      path : mBeanAttributeCoordinate.path()
     }, {
       success : function(response) {
-        update(chart.series[0], chart.yAxis[0], response);
+        var serie = chart.series[0];
+        var shift = serie.data.length > plotOptions.xAxisValueKeep();
+        var value = plotOptions.xAxisValueConvert(response.value);
+        serie.addPoint({
+          x : response.timestamp * 1000,
+          y : value
+        }, true, shift);
       },
       timeout : 2000, // 2 seconds
       error : function(response) {
         alert("Error: " + response.error);
       },
       ajaxError : function(error) {
-        alter("Ajax error: " + error);
+        alert("Ajax error: " + error);
       }
     });
   };
-}
-
-function toMegabyte(bytes) {
-  return bytes / (1024 * 1024);
 }
 
 function attachGcEvent() {
@@ -93,17 +135,9 @@ function attachAddNewWatchEvent() {
                 .append(
                     '<div id="'
                         + attribute
-                        + '" style="width: 400px; height: 200px; margin: 5 5; float: left;"></div>');
-            var plot = new MBeanAttributeRealTimePolt(attribute, mbean,
-                attribute, function(serie, yAxis, response) {
-                  var shift = serie.data.length > 5;
-                  serie.addPoint({
-                    x : response.timestamp * 1000,
-                    y : response.value
-                  }, true, shift);
-                });
-
-            plots.push(plot);
+                        + '" style="width: 600px; height: 200px; margin: 5 5; float: left;"></div>');
+            var coordinate = new MBeanAttributeCoordinate(mbean, attribute);
+            plots.push(new MBeanAttributeRealTimePolt(attribute, coordinate));
           });
 }
 
@@ -121,31 +155,18 @@ $(document).ready(
       attachUpdateIntervalEvent();
       attachAddNewWatchEvent();
 
-      var heapMemoryUsagePolt = new MBeanAttributeRealTimePolt("memory",
-          "java.lang:type=Memory", "HeapMemoryUsage", function(serie, yAxis,
-              response) {
-            var usage = response.value;
-            // yAxis.setExtremes(toMegabyte(usage.init), toMegabyte(usage.max));
-            var shift = serie.data.length > 5;
+      var heapMemoryUsage = new MBeanAttributeCoordinate(
+          "java.lang:type=Memory", "HeapMemoryUsage", "used");
+      var heapMemoryUsagePlotOptions = new PoltOptions("Unit: MB", function(
+          value) {
+        return value / (1024 * 1024);
+      });
 
-            serie.addPoint({
-              x : response.timestamp * 1000,
-              y : toMegabyte(usage.used)
-            }, true, shift);
-          }, "", " MB");
-
-      var systemLoadAveragePolt = new MBeanAttributeRealTimePolt("load",
-          "java.lang:type=OperatingSystem", "SystemLoadAverage", function(
-              serie, yAxis, response) {
-            var shift = serie.data.length > 5;
-            serie.addPoint({
-              x : response.timestamp * 1000,
-              y : response.value
-            }, true, shift);
-          });
-
-      plots.push(heapMemoryUsagePolt);
-      plots.push(systemLoadAveragePolt);
+      plots.push(new MBeanAttributeRealTimePolt("memory", heapMemoryUsage,
+          heapMemoryUsagePlotOptions));
+      plots.push(new MBeanAttributeRealTimePolt("load",
+          new MBeanAttributeCoordinate("java.lang:type=OperatingSystem",
+              "SystemLoadAverage")));
 
       function collectAndUpdate() {
         $.each(plots, function(index, plot) {
