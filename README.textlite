@@ -1,0 +1,11 @@
+h1. What's JSMX
+JSMX is a simple web manager of JMX use "jolokia":http://www.jolokia.org/ and "highcharts":www.highcharts.com .
+Now, it's just a simple demo, so more details you want to know is in codes.
+
+h1. How to Run Demo
+# git clone git@github.com:zhongl/jsmx.git;
+# import it to your favorite IDE, and compile jsmx/demo module;
+# run Demo.java with VM option '-javaagent:${path/to/jolokia-jvm-agent.jar}=port=7777,host=localhost';
+# use your web browser open jsmx/core/src/main/resourcse/dashboard.html, then you can see the show.
+
+Enjoy it!
