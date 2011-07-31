@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.jdt.launching.localJavaApplication">
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
+<listEntry value="/jsmx-demo/src/main/java/com/github/zhongl/jsmx/demo/Demo.java"/>
+</listAttribute>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
+<listEntry value="1"/>
+</listAttribute>
+<stringAttribute key="org.eclipse.jdt.launching.CLASSPATH_PROVIDER" value="org.eclipse.m2e.launchconfig.classpathProvider"/>
+<stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="com.github.zhongl.jsmx.demo.Demo"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="jsmx-demo"/>
+<stringAttribute key="org.eclipse.jdt.launching.SOURCE_PATH_PROVIDER" value="org.eclipse.m2e.launchconfig.sourcepathProvider"/>
+<stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-Djava.util.logging.config.file=etc/logging.properties -javaagent:lib/jmxetric-0.0.6.jar=config=etc/jmxetric.xml,wireformat31x=true -javaagent:lib/jolokia-jvm-jdk6-0.91-agent.jar=port=7777,host=localhost"/>
+</launchConfiguration>

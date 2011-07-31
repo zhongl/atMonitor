@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE jmxetric-config [
+   <!ELEMENT jmxetric-config (sample|ganglia|jvm)*>
+   <!ELEMENT sample (mbean)*>
+      <!ATTLIST sample delay CDATA #REQUIRED>
+      <!ATTLIST sample initialdelay CDATA "0">
+   <!ELEMENT mbean (attribute)*>
+      <!ATTLIST mbean name CDATA #REQUIRED>
+      <!ATTLIST mbean pname CDATA #REQUIRED>
+   <!ELEMENT attribute (composite*)>
+      <!ATTLIST attribute name CDATA #REQUIRED>
+      <!ATTLIST attribute type CDATA "" >
+      <!ATTLIST attribute units CDATA "" >
+      <!ATTLIST attribute pname CDATA "" >
+      <!ATTLIST attribute slope CDATA "both" >
+   <!ELEMENT composite EMPTY>
+      <!ATTLIST composite name CDATA #REQUIRED>
+      <!ATTLIST composite type CDATA "" >
+      <!ATTLIST composite units CDATA "" >
+      <!ATTLIST composite pname CDATA "" >
+      <!ATTLIST composite slope CDATA "both" >
+   <!ELEMENT ganglia EMPTY>
+      <!ATTLIST ganglia hostname CDATA #REQUIRED>
+      <!ATTLIST ganglia port CDATA #REQUIRED>
+      <!ATTLIST ganglia mode CDATA #REQUIRED>
+      <!ATTLIST ganglia wireformat31x CDATA #REQUIRED>
+   <!ELEMENT jvm EMPTY>
+      <!ATTLIST jvm process CDATA "">
+]>
+<jmxetric-config>
+  <jvm process="JSMX" />
+  <sample delay="10">
+    <mbean name="jsmx:type=Demo" pname="Demo">
+      <attribute name="count" type="int32" pname="Count" />
+      <attribute name="gauge" type="int32" pname="Gauge" />
+    </mbean>
+  </sample>
+  <ganglia hostname="10.13.123.213" port="8649" mode="multicast"
+    wireformat31x="true" />
+</jmxetric-config>
+
