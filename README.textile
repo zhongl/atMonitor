@@ -1,6 +1,7 @@
 h1. What's JSMX
 
 JSMX is a simple demo of monitor & management solution with JMX, it includes:
+# declaring mbean, which used "pojo-mbean":http://code.google.com/p/pojo-mbean/;
 # real-time web console, which used "jolokia":http://www.jolokia.org and "highcharts":http://www.highcharts.com;
 # integrating with "ganglia":http://ganglia.info , which used "jmxetric":http://code.google.com/p/jmxetric/.  
 
