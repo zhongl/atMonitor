@@ -35,7 +35,7 @@
       <attribute name="gauge" type="int32" pname="Gauge" />
     </mbean>
   </sample>
-  <ganglia hostname="localhost" port="8649" mode="multicast"
+  <ganglia hostname="10.13.123.213" port="8649" mode="multicast"
     wireformat31x="true" />
 </jmxetric-config>
 

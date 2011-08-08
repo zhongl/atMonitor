@@ -9,5 +9,6 @@
   <modules>
     <module>core</module>
     <module>demo</module>
+    <module>agent</module>
   </modules>
 </project>
