@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Premain-Class: com.github.zhongl.jsmx.agent.InstrumentationAgent
+Can-Redefine-Classes: true
+Can-Retransform-Classes: true

@@ -25,7 +25,7 @@ public class InstrumentationAgent {
 
     public InstrumentationMBean(Instrumentation instrumentation) throws Exception {
       this.instrumentation = instrumentation;
-      instrumentation.addTransformer(Track.transformer, true);
+      instrumentation.addTransformer(Trace.transformer, true);
       new MBeanRegistration(this).register();
     }
 
@@ -66,7 +66,7 @@ public class InstrumentationAgent {
     public void retransformClasses(@Parameter("className") String className) throws Exception {
 
       try {
-        Track.transformer.addIncludeClassName(className);
+        Trace.transformer.addIncludeClassName(className);
         instrumentation.retransformClasses(toClasses(className));
       } catch (Throwable e) {
         e.printStackTrace();

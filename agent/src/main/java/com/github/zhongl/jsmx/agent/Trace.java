@@ -11,19 +11,31 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
 
 /**
- * {@link Track}
+ * {@link Trace}
  * 
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2011-8-8
  * 
  */
-public class Track {
-  public static void enter() {
-    System.out.println("enter method.");
+public class Trace {
+  public static void enter(String clazz, String method, String desc) {
+    System.out.print("enter ");
+    System.out.print(clazz);
+    System.out.print(".");
+    System.out.print(method);
+    System.out.print(desc);
+    System.out.println();
   }
 
-  public static void exit() {
-    System.out.println("exit method.");
+  public static void exit(String clazz, String method, String desc, int returnCode) {
+    System.out.print("exit ");
+    System.out.print(clazz);
+    System.out.print(".");
+    System.out.print(method);
+    System.out.print(desc);
+    System.out.print(" - ");
+    System.out.print(returnCode);
+    System.out.println();
   }
 
   private static String dotToSlash(String value) {
@@ -42,36 +54,59 @@ public class Track {
     }
   });
 
-  private Track() {}
+  private Trace() {}
 
   static class AddTrackClassAdapter extends ClassAdapter {
 
+    private String className;
+
     public AddTrackClassAdapter(ClassVisitor cv) {
       super(cv);
+    }
+    
+    @Override
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+      this.className = name;
+      super.visit(version, access, name, signature, superName, interfaces);
     }
 
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
       final MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
       if (mv == null) return mv;
-      return new AddTrackMethodAdapter(mv, access, name, desc);
+      
+      return new AddTrackMethodAdapter(mv, access, name, desc, className);
     }
   }
 
   static class AddTrackMethodAdapter extends AdviceAdapter {
 
-    protected AddTrackMethodAdapter(MethodVisitor mv, int access, String name, String desc) {
+    private final String className;
+    private final String methodName;
+    private final String desc;
+
+    protected AddTrackMethodAdapter(MethodVisitor mv, int access, String name, String desc, String className) {
       super(mv, access, name, desc);
+      this.className = className;
+      this.methodName = name;
+      this.desc = desc;
     }
 
     @Override
     protected void onMethodEnter() {
-      visitMethodInsn(Opcodes.INVOKESTATIC, ownerOf(Track.class), "enter", "()V");
+      visitLdcInsn(className);
+      visitLdcInsn(methodName);
+      visitLdcInsn(desc);
+      visitMethodInsn(Opcodes.INVOKESTATIC, ownerOf(Trace.class), "enter", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
     }
 
     @Override
     protected void onMethodExit(int arg0) {
-      visitMethodInsn(Opcodes.INVOKESTATIC, ownerOf(Track.class), "exit", "()V");
+      visitLdcInsn(className);
+      visitLdcInsn(methodName);
+      visitLdcInsn(desc);
+      visitLdcInsn(arg0);
+      visitMethodInsn(Opcodes.INVOKESTATIC, ownerOf(Trace.class), "exit", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
     }
 
   }
