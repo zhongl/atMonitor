@@ -32,12 +32,16 @@ public class Demo {
 
     @ManagedAttribute
     public long getCount() {
-      if(count == 60) throwRuntimeException();
       return count;
     }
+    
+    @ManagedOperation
+    public void showException(String message){
+      throwRuntimeException(message);
+    }
 
-    private void throwRuntimeException() {
-      throw new RuntimeException("for demo.");
+    private void throwRuntimeException(String message) {
+      throw new RuntimeException(message);
     }
 
     @ManagedAttribute
