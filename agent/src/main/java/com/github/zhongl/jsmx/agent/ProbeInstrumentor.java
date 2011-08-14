@@ -6,7 +6,6 @@ import java.io.*;
 import java.lang.instrument.*;
 import java.security.*;
 import java.util.*;
-import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 
 import org.ow2.asm.*;
@@ -22,6 +21,10 @@ import org.softee.management.annotation.*;
  */
 @MBean(objectName = "jsmx:type=ProbeInstrumentor")
 public class ProbeInstrumentor {
+
+  private static String slashToDot(String className) {
+    return className.replace('/', '.');
+  }
 
   private static byte[] toBytes(InputStream stream) throws IOException {
     if (stream == null) throw new FileNotFoundException();
@@ -50,7 +53,6 @@ public class ProbeInstrumentor {
 
   public ProbeInstrumentor(Instrumentation instrumentation) {
     this.instrumentation = instrumentation;
-    // add(resetTransformer);
   }
 
   @ManagedOperation
@@ -84,9 +86,9 @@ public class ProbeInstrumentor {
   @ManagedOperation
   public void probe() throws Throwable {
     try {
-      flag.set(1);
       add(probeTransformer);
       instrumentation.retransformClasses(classArray());
+      remove(probeTransformer);
     } catch (Throwable t) {
       warning(t);
       throw t;
@@ -101,8 +103,9 @@ public class ProbeInstrumentor {
   @ManagedOperation
   public void reset() throws Throwable {
     try {
-      flag.set(-1);
+      add(resetTransformer);
       instrumentation.retransformClasses(classArray());
+      remove(resetTransformer);
       classNames.clear();
     } catch (Throwable t) {
       warning(t);
@@ -134,20 +137,12 @@ public class ProbeInstrumentor {
     return classNames.contains(slashToDot(className));
   }
 
-  private static String slashToDot(String className) {
-    return className.replace('/', '.');
-  }
-
   private boolean isCurrent(ClassLoader loader) {
     return getClass().getClassLoader().equals(loader);
   }
 
-  private boolean isProbe() {
-    return flag.get() == 1;
-  }
-
-  private boolean isReset() {
-    return flag.get() == -1;
+  private void remove(ClassFileTransformer transformer) {
+    instrumentation.removeTransformer(transformer);
   }
 
   private final ClassFileTransformer resetTransformer = new ClassFileTransformer() {
@@ -159,7 +154,7 @@ public class ProbeInstrumentor {
                             ProtectionDomain protectionDomain,
                             byte[] classfileBuffer) throws IllegalClassFormatException {
       try {
-        if (isReset() && isCurrent(loader) && contains(className)) {
+        if (isCurrent(loader) && contains(className)) {
           byte[] bytes = toBytes(loader.getResourceAsStream(className + ".class"));
           LOGGER.info(format("reset class {1} from {0}", loader, className));
           return bytes;
@@ -173,8 +168,6 @@ public class ProbeInstrumentor {
 
   };
 
-  private final AtomicInteger flag = new AtomicInteger(0);
-
   private final ClassFileTransformer probeTransformer = new ClassFileTransformer() {
 
     @Override
@@ -184,7 +177,7 @@ public class ProbeInstrumentor {
                             ProtectionDomain protectionDomain,
                             byte[] classfileBuffer) throws IllegalClassFormatException {
       try {
-        if (isProbe() && isCurrent(loader) && contains(className)) {
+        if (isCurrent(loader) && contains(className)) {
           LOGGER.info(format("probe class {1} from {0}", loader, className));
           final ClassReader cr = new ClassReader(classfileBuffer);
           final ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
