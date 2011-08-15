@@ -3,7 +3,8 @@ h1. What's JSMX
 JSMX is a simple demo of monitor & management solution with JMX, it includes:
 # declaring mbean, which used "pojo-mbean":http://code.google.com/p/pojo-mbean/;
 # real-time web console, which used "jolokia":http://www.jolokia.org and "highcharts":http://www.highcharts.com;
-# integrating with "ganglia":http://ganglia.info , which used "jmxetric":http://code.google.com/p/jmxetric/.  
+# integrating with "ganglia":http://ganglia.info , which used "jmxetric":http://code.google.com/p/jmxetric/;  
+# runtime dynamic trace invocation, which used "asm":http://asm.ow2.org.
 
 
 h1. How to Run Demo
@@ -12,9 +13,19 @@ h1. How to Run Demo
 # import it to eclipse;
 # make sure ganglia-3.1.x has been set up("how to set up":http://sourceforge.net/apps/trac/ganglia/wiki/ganglia_configuration ); 
 # make sure "hostname" and "port" in jsmx/demo/etc/jmxetric.xml pointed to gmond; 
-# run jsmx/demo/Demo.lauch;
+# run jsmx/demo/realtime-monitor-management-demo.launch;
 ** use your web browser open jsmx/core/src/main/resourcse/dashboard.html, then you can see the real-time web console;
+# run jsmx/demo/ganglia-demo.launch
 ** use your web browser open ganglia web(eg: "http://localhost/ganglia":http://localhost/ganglia ), then you can see mbean state trends in ganglia.
+# run jsmx/demo/ztrace.launch
+** run jconsole, and connect to Demo process;
+** go to MBean->jsmx;
+** click Demo->Attributes, you can see nothing show at console but loaded message;
+** invoke ProbeInstrumentor->Operations->addProbeClass: com.github.zhongl.jsmx.demo.Demo$ManagableServer;
+** invoke ProbeInstrumentor->Operations->probe;
+** click Demo->Attributes again, you can see trace log at console now;
+** invoke ProbeInstrumentor->Operations->reset;
+** click Demo->Attributes again, you can see no more trace log at console.
 
 
 Enjoy it!
