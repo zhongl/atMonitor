@@ -1,7 +1,7 @@
 package com.github.zhongl.jsmx.agent;
 
-import org.ow2.asm.*;
-import org.ow2.asm.commons.*;
+import org.objectweb.asm.*;
+import org.objectweb.asm.commons.*;
 
 /**
  * {@link Probe}

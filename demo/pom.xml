@@ -18,15 +18,6 @@
       <artifactId>oncrpc</artifactId>
       <version>1.0.7</version>
     </dependency>
-    <dependency>
-    	<groupId>cglib</groupId>
-    	<artifactId>cglib-nodep</artifactId>
-    	<version>2.2</version>
-    </dependency>
-    <dependency>
-    	<groupId>asm</groupId>
-    	<artifactId>asm-all</artifactId>
-    	<version>4.0</version>
-    </dependency>
+
   </dependencies>
 </project>

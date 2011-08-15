@@ -8,8 +8,8 @@ import java.security.*;
 import java.util.*;
 import java.util.logging.*;
 
-import org.ow2.asm.*;
-import org.ow2.asm.commons.*;
+import org.objectweb.asm.*;
+import org.objectweb.asm.commons.*;
 import org.softee.management.annotation.*;
 
 /**
@@ -182,11 +182,7 @@ public class ProbeInstrumentor {
           final ClassReader cr = new ClassReader(classfileBuffer);
           final ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
           cr.accept(new ProbeClassAdapter(cw), ClassReader.SKIP_DEBUG);
-          byte[] bytes = cw.toByteArray();
-          FileOutputStream outputStream = new FileOutputStream("debug.class");
-          outputStream.write(bytes);
-          outputStream.close();
-          return bytes;
+          return cw.toByteArray();
         }
       } catch (Exception e) {
         LOGGER.info(format("transfor class {1} from {0}", loader, className));
@@ -200,7 +196,7 @@ public class ProbeInstrumentor {
 
   private final Set<String> classNames = new HashSet<String>();
 
-  static class ProbeClassAdapter extends org.ow2.asm.ClassAdapter {
+  static class ProbeClassAdapter extends ClassAdapter {
 
     public ProbeClassAdapter(ClassVisitor cv) {
       super(cv);

@@ -21,6 +21,23 @@
           </archive>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>1.4</version><!--$NO-MVN-MAN-VER$-->
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>nodep</shadedClassifierName> <!-- Any name that makes sense -->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -31,14 +48,14 @@
       <version>1.1</version>
     </dependency>
     <dependency>
-    	<groupId>cglib</groupId>
-    	<artifactId>cglib-nodep</artifactId>
-    	<version>2.2</version>
+      <groupId>asm</groupId>
+      <artifactId>asm</artifactId>
+      <version>3.3.1</version>
     </dependency>
     <dependency>
-    	<groupId>asm</groupId>
-    	<artifactId>asm-all</artifactId>
-    	<version>4.0</version>
+      <groupId>asm</groupId>
+      <artifactId>asm-commons</artifactId>
+      <version>3.3.1</version>
     </dependency>
   </dependencies>
 </project>
