@@ -12,6 +12,8 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
 import org.softee.management.annotation.*;
 
+import com.google.gson.*;
+
 /**
  * {@link ProbeInstrumentor}
  * 
@@ -56,13 +58,19 @@ public class ProbeInstrumentor {
   }
 
   @ManagedOperation
-  public void addProbeClass(String name) throws Exception {
-    classNames.add(name.trim());
+  @Description("return a json String of methods matched regex.")
+  public String addProbeByPattern(@Parameter("regex of class, default is '.*'.") String classPattern,
+                                  @Parameter("regex of method, default is '.*'.") String methodPattern) {
+    PointcutFilter pointcutFilter = new PointcutFilter(classPattern, methodPattern);
+    pointcutFilterSet.add(pointcutFilter);
+    Map<String, String> result = pointcutFilter.filter(instrumentation.getAllLoadedClasses());
+    classNames.addAll(result.keySet());
+    return json(result);
   }
 
-  @ManagedOperation
-  public String classes() {
-    return classNames.toString();
+  public boolean containsMethod(String className, String name) {
+    // TODO Auto-generated method stub
+    return false;
   }
 
   @ManagedOperation
@@ -96,16 +104,12 @@ public class ProbeInstrumentor {
   }
 
   @ManagedOperation
-  public void removeProbeClass(String name) throws Exception {
-    classNames.remove(name.trim());
-  }
-
-  @ManagedOperation
   public void reset() throws Throwable {
     try {
       add(resetTransformer);
       instrumentation.retransformClasses(classArray());
       remove(resetTransformer);
+      pointcutFilterSet.clear();
       classNames.clear();
     } catch (Throwable t) {
       warning(t);
@@ -133,17 +137,29 @@ public class ProbeInstrumentor {
     return Class.forName(name.trim());
   }
 
-  private boolean contains(String className) {
-    return classNames.contains(slashToDot(className));
+  private boolean containsClass(String name) {
+    String value = slashToDot(name);
+    for (PointcutFilter filter : pointcutFilterSet) {
+      if (filter.matchClassName(value)) return true;
+    }
+    return false;
   }
 
   private boolean isCurrent(ClassLoader loader) {
     return getClass().getClassLoader().equals(loader);
   }
 
+  private String json(Map<String, String> map) {
+    return gson.toJson(map);
+  }
+
   private void remove(ClassFileTransformer transformer) {
     instrumentation.removeTransformer(transformer);
   }
+
+  private final Set<String> classNames = new HashSet<String>();
+
+  private final Set<PointcutFilter> pointcutFilterSet = new HashSet<PointcutFilter>();
 
   private final ClassFileTransformer resetTransformer = new ClassFileTransformer() {
 
@@ -154,7 +170,7 @@ public class ProbeInstrumentor {
                             ProtectionDomain protectionDomain,
                             byte[] classfileBuffer) throws IllegalClassFormatException {
       try {
-        if (isCurrent(loader) && contains(className)) {
+        if (isCurrent(loader) && containsClass(className)) {
           byte[] bytes = toBytes(loader.getResourceAsStream(className + ".class"));
           LOGGER.info(format("reset class {1} from {0}", loader, className));
           return bytes;
@@ -167,7 +183,6 @@ public class ProbeInstrumentor {
     }
 
   };
-
   private final ClassFileTransformer probeTransformer = new ClassFileTransformer() {
 
     @Override
@@ -177,7 +192,7 @@ public class ProbeInstrumentor {
                             ProtectionDomain protectionDomain,
                             byte[] classfileBuffer) throws IllegalClassFormatException {
       try {
-        if (isCurrent(loader) && contains(className)) {
+        if (isCurrent(loader) && containsClass(className)) {
           LOGGER.info(format("probe class {1} from {0}", loader, className));
           final ClassReader cr = new ClassReader(classfileBuffer);
           final ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
@@ -192,11 +207,12 @@ public class ProbeInstrumentor {
     }
 
   };
+
   private final Instrumentation instrumentation;
 
-  private final Set<String> classNames = new HashSet<String>();
+  private final Gson gson = new Gson();
 
-  static class ProbeClassAdapter extends ClassAdapter {
+  class ProbeClassAdapter extends ClassAdapter {
 
     public ProbeClassAdapter(ClassVisitor cv) {
       super(cv);
@@ -211,7 +227,8 @@ public class ProbeInstrumentor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
       MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
-      return (mv != null) ? new ProbeMethodAdapter(mv, access, name, desc, className) : mv;
+      return (mv != null && containsMethod(className, name))
+        ? new ProbeMethodAdapter(mv, access, name, desc, className) : mv;
     }
 
     private String className;

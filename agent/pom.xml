@@ -57,5 +57,10 @@
       <artifactId>asm-commons</artifactId>
       <version>3.3.1</version>
     </dependency>
+    <dependency>
+    	<groupId>com.google.code.gson</groupId>
+    	<artifactId>gson</artifactId>
+    	<version>1.7.1</version>
+    </dependency>
   </dependencies>
 </project>

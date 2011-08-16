@@ -16,6 +16,14 @@ import org.softee.management.annotation.*;
 @MBean(objectName = "jsmx:type=PerformanceCollector")
 public class InvocationPerformanceCollector extends Advice {
 
+  private final Aggregation<Category, Statistics> aggregation = new Aggregation<Category, Statistics>() {
+
+    @Override
+    protected Statistics initialValue() {
+      return new Statistics();
+    }
+  };
+
   @Override
   public void enterWith(Context context) {
     context.setTimeOn();
@@ -24,19 +32,16 @@ public class InvocationPerformanceCollector extends Advice {
 
   @Override
   public void exitWith(Context context) {
-    System.out.println(context.getClassName() + "." + context.getMethodName() + ": " + context.elapse() + "ns");
-    StackTraceElement[] stackTrace = context.getStackTrace();
-    for (StackTraceElement stackTraceElement : stackTrace) {
-      System.out.println("\t" + stackTraceElement);
-    }
+    aggregation.get(new Category(context.getClassName(), context.getMethodName())).increase(context.elapse(),
+                                                                                            context.getStackTrace());
   }
 
-  static class Key {
+  static class Category {
 
     private final String className;
     private final String methodName;
 
-    public Key(String className, String methodName) {
+    public Category(String className, String methodName) {
       this.className = className;
       this.methodName = methodName;
     }
@@ -60,7 +65,7 @@ public class InvocationPerformanceCollector extends Advice {
       if (this == obj) return true;
       if (obj == null) return false;
       if (getClass() != obj.getClass()) return false;
-      Key other = (Key) obj;
+      Category other = (Category) obj;
       if (className == null) {
         if (other.className != null) return false;
       } else if (!className.equals(other.className)) return false;
@@ -72,12 +77,30 @@ public class InvocationPerformanceCollector extends Advice {
 
   }
 
-  static class Value {
+  abstract static class Aggregation<K, V> {
+    private final ConcurrentHashMap<K, V> map = new ConcurrentHashMap<K, V>();
+
+    public V get(K key) {
+      V value = map.get(key);
+      if (value != null) return value;
+      value = initialValue();
+      V absent = map.putIfAbsent(key, value);
+      return absent == null ? value : absent;
+    }
+
+    protected abstract V initialValue();
+
+    public Map<K, V> snapshot() {
+      return new HashMap<K, V>(map);
+    }
+  }
+
+  static class Statistics {
 
     private final AtomicLong count = new AtomicLong();
     private final AtomicLong totalElapse = new AtomicLong();
 
-    public void increase(long elapse) {
+    public void increase(long elapse, StackTraceElement[] stackTraceElements) {
       count.incrementAndGet();
       totalElapse.addAndGet(elapse);
     }
@@ -89,14 +112,6 @@ public class InvocationPerformanceCollector extends Advice {
     public long count() {
       return count.get();
     }
-  }
-  
-  public static void main(String[] args) {
-    int[] is = {1,2,3};
-    System.out.println(is.hashCode());
-    System.out.println(is);
-    System.out.println(Arrays.hashCode(is));
-    
   }
 
   @Override
