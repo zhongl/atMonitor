@@ -1,23 +1,49 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <artifactId>jsmx</artifactId>
-    <groupId>com.github.zhongl</groupId>
-    <version>0.0.1-SNAPSHOT</version>
-    <relativePath>..</relativePath>
-  </parent>
-  <artifactId>jsmx-demo</artifactId>
-  <dependencies>
-    <dependency>
-      <groupId>org.softee</groupId>
-      <artifactId>pojo-mbean</artifactId>
-      <version>1.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.acplt</groupId>
-      <artifactId>oncrpc</artifactId>
-      <version>1.0.7</version>
-    </dependency>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>jsmx</artifactId>
+		<groupId>com.github.zhongl</groupId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
+	</parent>
+	<artifactId>jsmx-demo</artifactId>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.2</version>
+				<configuration>
+					<executable>java</executable>
+					<arguments>
+						<argument>
+							-javaagent:../agent/target/jsmx-agent-0.0.1-SNAPSHOT-nodep.jar
+						</argument>
+						<argument>
+							-cp
+						</argument>
+						<classpath />
+						<argument>
+							com.github.zhongl.jsmx.demo.Demo
+						</argument>
+					</arguments>
+				</configuration>
+			</plugin>
 
-  </dependencies>
+		</plugins>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>org.softee</groupId>
+			<artifactId>pojo-mbean</artifactId>
+			<version>1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.acplt</groupId>
+			<artifactId>oncrpc</artifactId>
+			<version>1.0.7</version>
+		</dependency>
+
+	</dependencies>
 </project>

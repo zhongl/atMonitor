@@ -1,5 +1,7 @@
 package com.github.zhongl.jsmx.agent;
 
+import java.util.*;
+
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
 
@@ -17,7 +19,21 @@ public class Probe {
                                    String descriptor,
                                    Object thisObject,
                                    Object[] arguments) {
-    System.out.println("before -> " + new Context(className, methodName, descriptor, thisObject, arguments));
+    boolean voidReturn = Type.getReturnType(descriptor).equals(Type.VOID_TYPE);
+    Context context = new Context(className, methodName, voidReturn, thisObject, arguments);
+    try {
+      advice.enterWith(context);
+    } catch (Throwable t) {
+      handleEnterError(context, t);
+    }
+    if (context.isTimerOn()) context.startAt(System.nanoTime());
+    if (context.isTraceOn()) context.setStackTrace(currentStrackTrace());
+    CONTEXT_STACK.get().push(context);
+  }
+
+  private static StackTraceElement[] currentStrackTrace() {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+    return Arrays.copyOfRange(stackTrace, 4, stackTrace.length); // trim useless stack trace elements.
   }
 
   public static void onMethodEnd(Object result,
@@ -25,7 +41,22 @@ public class Probe {
                                  String methodName,
                                  String descriptor,
                                  Object thisObject) {
-    System.out.println("end -> " + new Context(className, methodName, descriptor, thisObject, result));
+    Context context = CONTEXT_STACK.get().pop();
+    if (context.isTimerOn()) context.stopAt(System.nanoTime());
+    context.exitWith(result);
+    try {
+      advice.exitWith(context);
+    } catch (Throwable t) {
+      handleExitError(context, t);
+    }
+  }
+
+  private static void handleExitError(Context context, Throwable t) {
+    t.printStackTrace();
+  }
+
+  private static void handleEnterError(Context context, Throwable t) {
+    t.printStackTrace();
   }
 
   private static Method method(String name, Class<?>... argumentTypes) {
@@ -35,6 +66,15 @@ public class Probe {
       throw new Error(e);
     }
   }
+
+  private static final ThreadLocal<Stack<Context>> CONTEXT_STACK = new ThreadLocal<Stack<Context>>() {
+    @Override
+    protected java.util.Stack<Context> initialValue() {
+      return new Stack<Context>();
+    }
+  };
+
+  private static Advice advice = new InvocationPerformanceCollector();
 
   public static final Method ENTRY = method("onMethodBegin",
                                             String.class,
@@ -53,35 +93,4 @@ public class Probe {
   public static final Type TYPE = Type.getType(Probe.class);
 
   private Probe() {}
-
-  public static class Context {
-
-    private Context(String className, String methodName, String descriptor, Object thisObject, Object resultOrArguments) {
-      this.className = className.replace('/', '.');
-      this.methodName = methodName;
-      this.descriptor = descriptor;
-      this.thisObject = thisObject;
-      this.resultOrArguments = resultOrArguments;
-    }
-
-    public StackTraceElement[] stack() {
-      return Thread.currentThread().getStackTrace();
-    }
-
-    @Override
-    public String toString() {
-      return String.format("Context [className=%s, methodName=%s, descriptor=%s, thisObject=%s, resultOrArguments=%s]",
-                           className,
-                           methodName,
-                           descriptor,
-                           thisObject,
-                           resultOrArguments);
-    }
-
-    private final String className;
-    private final String methodName;
-    private final String descriptor;
-    private final Object thisObject;
-    private final Object resultOrArguments;
-  }
 }
