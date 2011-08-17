@@ -14,7 +14,7 @@ import org.softee.management.annotation.*;
  * @created 2011-8-16
  * 
  */
-@MBean(objectName = "jsmx:type=PerformanceCollector")
+@MBean(objectName = "jsmx:type=Performance")
 public class Performance extends Advice {
 
   @Override
@@ -28,9 +28,14 @@ public class Performance extends Advice {
     Category key = new Category(context.getClassName(), context.getMethodName());
     aggregation.get(key).increase(context.elapse(), context.getStackTrace());
   }
+  
+  @ManagedAttribute
+  public String getStatistics(){
+    return getStatisticsBy(5);
+  }
 
   @ManagedOperation
-  public String getStatistics(int stackDepth) {
+  public String getStatisticsBy(int stackDepth) {
     Map<Category, Statistics> snapshot = aggregation.snapshot();
     StringBuilder sb = new StringBuilder();
     for (Category category : snapshot.keySet()) {
