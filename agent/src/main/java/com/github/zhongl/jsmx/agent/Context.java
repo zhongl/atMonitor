@@ -15,15 +15,15 @@ public final class Context {
     this.className = className;
     this.methodName = methodName;
     this.voidReturn = voidReturn;
-    this.thisObject = thisObject;
-    this.arguments = arguments;
+    this.thisObject = thisObject.toString();
+    this.arguments = Arrays.toString(arguments);
   }
 
   public long elapse() {
     return stoped - started;
   }
 
-  public Object[] getArguments() {
+  public String getArguments() {
     return arguments;
   }
 
@@ -74,7 +74,7 @@ public final class Context {
                          methodName,
                          voidReturn,
                          thisObject,
-                         Arrays.toString(arguments),
+                         arguments,
                          result,
                          started,
                          stoped,
@@ -110,8 +110,8 @@ public final class Context {
   private final String className;
   private final String methodName;
   private final boolean voidReturn;
-  private final Object thisObject;
-  private final Object[] arguments;
+  private final String thisObject;
+  private final String arguments;
 
   private Object result;
 

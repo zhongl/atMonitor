@@ -9,10 +9,8 @@ import java.util.*;
 import java.util.logging.*;
 
 import org.objectweb.asm.*;
-import org.objectweb.asm.commons.*;
 import org.softee.management.annotation.*;
-
-import com.google.gson.*;
+import org.softee.management.helper.*;
 
 /**
  * {@link ProbeInstrumentor}
@@ -58,19 +56,51 @@ public class ProbeInstrumentor {
   }
 
   @ManagedOperation
-  @Description("return a json String of methods matched regex.")
-  public String addProbeByPattern(@Parameter("regex of class, default is '.*'.") String classPattern,
-                                  @Parameter("regex of method, default is '.*'.") String methodPattern) {
+  @Description("return a set of methods matched regex.")
+  public String addProbeByPattern(@Parameter("classPattern") @Description("regex of class, default is '.*'.") String classPattern,
+                                  @Parameter("methodPattern") @Description("regex of method, default is '.*'.") String methodPattern) throws Throwable {
     PointcutFilter pointcutFilter = new PointcutFilter(classPattern, methodPattern);
-    pointcutFilterSet.add(pointcutFilter);
-    Map<String, String> result = pointcutFilter.filter(instrumentation.getAllLoadedClasses());
-    classNames.addAll(result.keySet());
-    return json(result);
+    try {
+      Map<String, Set<String>> result = pointcutFilter.filter(instrumentation.getAllLoadedClasses());
+      if (!result.isEmpty()) {
+        pointcutFilterSet.add(pointcutFilter);
+        classNames.addAll(result.keySet());
+      }
+      return formatClassAndMethodsOf(result);
+    } catch (Throwable t) {
+      warning(t);
+      throw t;
+    }
   }
 
-  public boolean containsMethod(String className, String name) {
-    // TODO Auto-generated method stub
-    return false;
+  private String formatClassAndMethodsOf(Map<String, Set<String>> result) {
+    StringBuilder sb = new StringBuilder();
+    Set<String> keySet = result.keySet();
+    for (String className : keySet) {
+      sb.append(className).append('.').append(result.get(className)).append('\n');
+    }
+    return sb.toString();
+  }
+
+  @ManagedAttribute
+  public void setAdvice(String name) throws Throwable {
+    try {
+      Advice instance = (Advice) Class.forName("com.github.zhongl.jsmx.agent." + name).newInstance();
+      registerIfIsMBean(instance);
+      Probe.setAdvice(instance);
+    } catch (Throwable t) {
+      warning(t);
+      throw t;
+    }
+  }
+
+  private void registerIfIsMBean(Advice instance) throws Exception {
+    if (instance.getClass().getAnnotation(MBean.class) != null) new MBeanRegistration(instance).register();
+  }
+
+  @ManagedAttribute
+  public String getAdvice() {
+    return Probe.adviceName();
   }
 
   @ManagedOperation
@@ -92,7 +122,9 @@ public class ProbeInstrumentor {
   }
 
   @ManagedOperation
+  @Description("retransform classes matched patterns and set probes.")
   public void probe() throws Throwable {
+    if (classNames.isEmpty()) return;
     try {
       add(probeTransformer);
       instrumentation.retransformClasses(classArray());
@@ -104,7 +136,9 @@ public class ProbeInstrumentor {
   }
 
   @ManagedOperation
+  @Description("retransform classes matched patterns and reset them.")
   public void reset() throws Throwable {
+    if (classNames.isEmpty()) return;
     try {
       add(resetTransformer);
       instrumentation.retransformClasses(classArray());
@@ -140,17 +174,21 @@ public class ProbeInstrumentor {
   private boolean containsClass(String name) {
     String value = slashToDot(name);
     for (PointcutFilter filter : pointcutFilterSet) {
-      if (filter.matchClassName(value)) return true;
+      if (filter.matchsClass(value)) return true;
+    }
+    return false;
+  }
+
+  private boolean containsMethod(String className, String methodName) {
+    for (PointcutFilter filter : pointcutFilterSet) {
+      if (filter.matchsMethod(className, methodName)) return true;
     }
     return false;
   }
 
   private boolean isCurrent(ClassLoader loader) {
-    return getClass().getClassLoader().equals(loader);
-  }
-
-  private String json(Map<String, String> map) {
-    return gson.toJson(map);
+    // return getClass().getClassLoader().equals(loader);
+    return true;
   }
 
   private void remove(ClassFileTransformer transformer) {
@@ -196,7 +234,7 @@ public class ProbeInstrumentor {
           LOGGER.info(format("probe class {1} from {0}", loader, className));
           final ClassReader cr = new ClassReader(classfileBuffer);
           final ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-          cr.accept(new ProbeClassAdapter(cw), ClassReader.SKIP_DEBUG);
+          cr.accept(new ProbeClassAdapter(cw), ClassReader.EXPAND_FRAMES);
           return cw.toByteArray();
         }
       } catch (Exception e) {
@@ -209,8 +247,6 @@ public class ProbeInstrumentor {
   };
 
   private final Instrumentation instrumentation;
-
-  private final Gson gson = new Gson();
 
   class ProbeClassAdapter extends ClassAdapter {
 
@@ -232,74 +268,6 @@ public class ProbeInstrumentor {
     }
 
     private String className;
-
-  }
-
-  private static class ProbeMethodAdapter extends AdviceAdapter {
-
-    protected ProbeMethodAdapter(MethodVisitor mv, int access, String name, String desc, String className) {
-      super(mv, access, name, desc);
-      start = new Label();
-      end = new Label();
-      methodName = name;
-      this.className = className;
-    }
-
-    @Override
-    public void visitMaxs(int maxStack, int maxLocals) {
-      mark(end);
-      catchException(start, end, Type.getType(Throwable.class));
-      dup();
-      push(className);
-      push(methodName);
-      push(methodDesc);
-      loadThis();
-      invokeStatic(Probe.TYPE, Probe.EXIT);
-      visitInsn(ATHROW);
-      super.visitMaxs(maxStack, maxLocals);
-    }
-
-    @Override
-    protected void onMethodEnter() {
-      push(className);
-      push(methodName);
-      push(methodDesc);
-      loadThis();
-      loadArgArray();
-      invokeStatic(Probe.TYPE, Probe.ENTRY);
-      mark(start);
-    }
-
-    @Override
-    protected void onMethodExit(int opcode) {
-      if (opcode == ATHROW) return; // do nothing, @see visitMax
-      prepareResultBy(opcode);
-      push(className);
-      push(methodName);
-      push(methodDesc);
-      loadThis();
-      invokeStatic(Probe.TYPE, Probe.EXIT);
-    }
-
-    private void prepareResultBy(int opcode) {
-      if (opcode == RETURN) { // void
-        push((Type) null);
-      } else if (opcode == ARETURN) { // object
-        dup();
-      } else {
-        if (opcode == LRETURN || opcode == DRETURN) { // long or double
-          dup2();
-        } else {
-          dup();
-        }
-        box(Type.getReturnType(methodDesc));
-      }
-    }
-
-    private final String className;
-    private final String methodName;
-    private final Label start;
-    private final Label end;
 
   }
 

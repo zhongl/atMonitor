@@ -21,6 +21,9 @@
 							-javaagent:../agent/target/jsmx-agent-0.0.1-SNAPSHOT-nodep.jar
 						</argument>
 						<argument>
+							-javaagent:lib/jolokia-jvm-jdk6-0.91-agent.jar=port=7777,host=localhost
+						</argument>
+						<argument>
 							-cp
 						</argument>
 						<classpath />

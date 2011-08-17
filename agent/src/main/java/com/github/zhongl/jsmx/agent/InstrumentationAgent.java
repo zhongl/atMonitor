@@ -24,6 +24,10 @@ public class InstrumentationAgent {
     main(agentArgs, instrumentation);
   }
 
+  public static void main(String[] args) {
+    // TODO attach VM with pid
+  }
+
   private static void main(String agentArgs, Instrumentation instrumentation) throws ManagementException,
                                                                              MalformedObjectNameException {
     System.out.println("loading...");

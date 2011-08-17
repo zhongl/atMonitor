@@ -1,6 +1,7 @@
 package com.github.zhongl.jsmx.agent;
 
 import java.util.*;
+import java.util.concurrent.atomic.*;
 
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
@@ -14,6 +15,10 @@ import org.objectweb.asm.commons.*;
  */
 public class Probe {
 
+  public static String adviceName() {
+    return advice().getClass().getSimpleName();
+  }
+
   public static void onMethodBegin(String className,
                                    String methodName,
                                    String descriptor,
@@ -22,18 +27,13 @@ public class Probe {
     boolean voidReturn = Type.getReturnType(descriptor).equals(Type.VOID_TYPE);
     Context context = new Context(className, methodName, voidReturn, thisObject, arguments);
     try {
-      advice.enterWith(context);
+      advice().enterWith(context);
     } catch (Throwable t) {
       handleEnterError(context, t);
     }
     if (context.isTimerOn()) context.startAt(System.nanoTime());
     if (context.isTraceOn()) context.setStackTrace(currentStrackTrace());
     CONTEXT_STACK.get().push(context);
-  }
-
-  private static StackTraceElement[] currentStrackTrace() {
-    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-    return Arrays.copyOfRange(stackTrace, 4, stackTrace.length); // trim useless stack trace elements.
   }
 
   public static void onMethodEnd(Object result,
@@ -45,17 +45,30 @@ public class Probe {
     if (context.isTimerOn()) context.stopAt(System.nanoTime());
     context.exitWith(result);
     try {
-      advice.exitWith(context);
+      advice().exitWith(context);
     } catch (Throwable t) {
       handleExitError(context, t);
     }
   }
 
-  private static void handleExitError(Context context, Throwable t) {
-    t.printStackTrace();
+  public static void setAdvice(Advice instance) {
+    advice.set(instance);
+  }
+
+  private static Advice advice() {
+    return advice.get();
+  }
+
+  private static StackTraceElement[] currentStrackTrace() {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+    return Arrays.copyOfRange(stackTrace, 4, stackTrace.length); // trim useless stack trace elements.
   }
 
   private static void handleEnterError(Context context, Throwable t) {
+    t.printStackTrace();
+  }
+
+  private static void handleExitError(Context context, Throwable t) {
     t.printStackTrace();
   }
 
@@ -74,7 +87,7 @@ public class Probe {
     }
   };
 
-  private static Advice advice = new InvocationPerformanceCollector();
+  public static final AtomicReference<Advice> advice = new AtomicReference<Advice>(new Trace());
 
   public static final Method ENTRY = method("onMethodBegin",
                                             String.class,
