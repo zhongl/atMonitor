@@ -10,7 +10,6 @@ import java.util.logging.*;
 
 import org.objectweb.asm.*;
 import org.softee.management.annotation.*;
-import org.softee.management.helper.*;
 
 /**
  * {@link ProbeInstrumentor}
@@ -86,16 +85,11 @@ public class ProbeInstrumentor {
   public void setAdvice(String name) throws Throwable {
     try {
       Advice instance = (Advice) Class.forName("com.github.zhongl.jsmx.agent." + name).newInstance();
-      registerIfIsMBean(instance);
       Probe.setAdvice(instance);
     } catch (Throwable t) {
       warning(t);
       throw t;
     }
-  }
-
-  private void registerIfIsMBean(Advice instance) throws Exception {
-    if (instance.getClass().getAnnotation(MBean.class) != null) new MBeanRegistration(instance).register();
   }
 
   @ManagedAttribute

@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.*;
 
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
+import org.softee.management.annotation.*;
+import org.softee.management.helper.*;
 
 /**
  * {@link Probe}
@@ -51,8 +53,9 @@ public class Probe {
     }
   }
 
-  public static void setAdvice(Advice instance) {
-    advice.set(instance);
+  public static void setAdvice(Advice instance) throws Exception {
+    registerIfIsMBean(instance);
+    unregisterIfIsMBean(advice.getAndSet(instance));
   }
 
   private static Advice advice() {
@@ -78,6 +81,14 @@ public class Probe {
     } catch (Exception e) {
       throw new Error(e);
     }
+  }
+
+  private static void registerIfIsMBean(Advice instance) throws Exception {
+    if (instance.getClass().getAnnotation(MBean.class) != null) new MBeanRegistration(instance).register();
+  }
+
+  private static void unregisterIfIsMBean(Advice instance) throws Exception {
+    if (instance.getClass().getAnnotation(MBean.class) != null) new MBeanRegistration(instance).unregister();
   }
 
   private static final ThreadLocal<Stack<Context>> CONTEXT_STACK = new ThreadLocal<Stack<Context>>() {
