@@ -1,8 +1,16 @@
 package com.github.zhongl.jsmx.agent;
 
+import static org.objectweb.asm.Type.*;
+
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
 
+/**
+ * {@link ProbeMethodAdapter}
+ * 
+ * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
+ * 
+ */
 class ProbeMethodAdapter extends AdviceAdapter {
 
   protected ProbeMethodAdapter(MethodVisitor mv, int access, String name, String desc, String className) {
@@ -21,9 +29,9 @@ class ProbeMethodAdapter extends AdviceAdapter {
     push(className);
     push(methodName);
     push(methodDesc);
-    loadThis();
+    loadThisOrPushNullIfIsStatic();
     invokeStatic(Probe.TYPE, Probe.EXIT);
-    visitInsn(ATHROW);
+    throwException();
     super.visitMaxs(maxStack, maxLocals);
   }
 
@@ -32,7 +40,7 @@ class ProbeMethodAdapter extends AdviceAdapter {
     push(className);
     push(methodName);
     push(methodDesc);
-    loadThis();
+    loadThisOrPushNullIfIsStatic();
     loadArgArray();
     invokeStatic(Probe.TYPE, Probe.ENTRY);
     mark(start);
@@ -45,23 +53,41 @@ class ProbeMethodAdapter extends AdviceAdapter {
     push(className);
     push(methodName);
     push(methodDesc);
-    loadThis();
+    loadThisOrPushNullIfIsStatic();
     invokeStatic(Probe.TYPE, Probe.EXIT);
+  }
+
+  private boolean isStaticMethod() {
+    return (methodAccess & ACC_STATIC) != 0;
+  }
+
+  private void loadThisOrPushNullIfIsStatic() {
+    if (isStaticMethod()) pushNull();
+    else loadThis();
   }
 
   private void prepareResultBy(int opcode) {
     if (opcode == RETURN) { // void
-      push((Type) null);
-    } else if (opcode == ARETURN) { // object
-      dup();
-    } else {
-      if (opcode == LRETURN || opcode == DRETURN) { // long or double
-        dup2();
-      } else {
-        dup();
-      }
-      box(Type.getReturnType(methodDesc));
+      pushNull();
+      return;
     }
+
+    if (opcode == ARETURN) { // object
+      dup();
+      return;
+    }
+
+    if (opcode == LRETURN || opcode == DRETURN) { // long or double
+      dup2();
+    } else { // boolean or byte or char or short or int
+      dup();
+    }
+
+    box(getReturnType(methodDesc));
+  }
+
+  private void pushNull() {
+    push((Type) null);
   }
 
   private final String className;
